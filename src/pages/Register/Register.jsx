@@ -15,14 +15,29 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const trimmedName = form.name.trim();
+        const trimmedEmail = form.email.trim();
+        if (!trimmedName || trimmedName.length < 2) {
+            setError("Full name must be at least 2 characters.");
+            return;
+        }
+        if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+            setError("Please enter a valid email address.");
+            return;
+        }
+        if (!form.password || form.password.length < 6) {
+            setError("Password must be at least 6 characters.");
+            return;
+        }
+
         try {
             setLoading(true);
             setError(null);
 
             // Only send adminKey if it's provided
             const payload = {
-                name: form.name,
-                email: form.email,
+                name: trimmedName,
+                email: trimmedEmail,
                 password: form.password,
             };
             if (form.adminKey.trim()) {

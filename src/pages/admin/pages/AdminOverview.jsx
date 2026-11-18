@@ -133,10 +133,11 @@ export default function AdminOverview() {
     ];
 
     // Enrollment by course (top 5)
-    const courseEnrollmentData = analytics?.topCourses?.slice(0, 5).map((course) => ({
-        name: course.courseTitle?.substring(0, 15) || "Unknown",
-        enrollments: course.count,
-    })) || [];
+    const topCoursesList = analytics?.enrollmentsByCourse || analytics?.topCourses || [];
+    const courseEnrollmentData = topCoursesList.slice(0, 5).map((course) => ({
+        name: (course.courseName || course.courseTitle || "Unknown").substring(0, 15),
+        enrollments: course.enrollments ?? course.count ?? 0,
+    }));
 
     return (
         <div className="space-y-4 sm:space-y-6">

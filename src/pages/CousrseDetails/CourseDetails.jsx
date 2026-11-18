@@ -5,7 +5,12 @@ import {
     fetchCourseById,
     clearCurrentCourse,
 } from "../../store/slices/coursesSlice";
-import { enrollCourseAsync, clearSuccess } from "../../store/slices/enrollmentSlice";
+import {
+    enrollCourseAsync,
+    fetchMyEnrollments,
+    clearSuccess,
+    clearError,
+} from "../../store/slices/enrollmentSlice";
 import { getMeAsync } from "../../store/slices/authSlice";
 
 export default function CourseDetails() {
@@ -17,16 +22,26 @@ export default function CourseDetails() {
     const { enrolling, error: enrollError, success, enrollments: myEnrollments } = useSelector((state) => state.enrollment);
     const { user, token, isAuthenticated } = useSelector((state) => state.auth);
     const [selectedBatchId, setSelectedBatchId] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         dispatch(fetchCourseById(id));
-        return () => dispatch(clearCurrentCourse());
+        dispatch(clearError());
+        dispatch(clearSuccess());
+        return () => {
+            dispatch(clearCurrentCourse());
+            dispatch(clearError());
+            dispatch(clearSuccess());
+        };
     }, [id, dispatch]);
 
-    // Load user if token exists but user is not loaded
+    // Load user & enrollments if token exists
     useEffect(() => {
-        if (token && !user) {
-            dispatch(getMeAsync());
+        if (token) {
+            if (!user) {
+                dispatch(getMeAsync());
+            }
+            dispatch(fetchMyEnrollments());
         }
     }, [token, user, dispatch]);
 
@@ -34,14 +49,16 @@ export default function CourseDetails() {
     const isAdmin = user && user.role === "admin";
     const cannotEnroll = isAdmin || isCreator;
 
-    const alreadyEnrolled = !!myEnrollments?.find((e) => e.course?._id === id);
+    const alreadyEnrolled = !!myEnrollments?.find((e) => (e.course?._id || e.course) === id);
 
     const handleEnroll = async () => {
+        if (isSubmitting || enrolling || alreadyEnrolled) return;
+
         // if user object not present but token exists, attempt to fetch profile
         if (!user && token) {
             try {
                 await dispatch(getMeAsync()).unwrap();
-            } catch (err) {
+            } catch {
                 // ignore, will redirect to login below
             }
         }
@@ -53,9 +70,22 @@ export default function CourseDetails() {
 
         if (cannotEnroll) return;
 
-        // Note: Since batches don't have _id in the model, we pass null
-        // The backend can be updated later to handle batch references properly
-        dispatch(enrollCourseAsync({ courseId: id, batchId: selectedBatchId !== null ? selectedBatchId.toString() : null }));
+        setIsSubmitting(true);
+        try {
+            const batchObj =
+                selectedBatchId !== null && currentCourse?.batches?.[selectedBatchId]
+                    ? currentCourse.batches[selectedBatchId]
+                    : null;
+            const resolvedBatchId = batchObj?._id ? String(batchObj._id) : null;
+            await dispatch(
+                enrollCourseAsync({
+                    courseId: id,
+                    batchId: resolvedBatchId,
+                })
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     useEffect(() => {
@@ -113,7 +143,7 @@ export default function CourseDetails() {
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text'
-                        }}>৳ {course.price * 100}</p>
+                        }}>৳ {course.price}</p>
 
                         <div>
                             {isAdmin ? (
@@ -142,8 +172,8 @@ export default function CourseDetails() {
                                     Go to Dashboard
                                 </button>
                             ) : (
-                                <button onClick={handleEnroll} disabled={enrolling} className="btn btn-primary gap-2">
-                                    {enrolling ? (
+                                <button onClick={handleEnroll} disabled={enrolling || isSubmitting} className="btn btn-primary gap-2">
+                                    {enrolling || isSubmitting ? (
                                         <>
                                             <span className="loading loading-spinner"></span>
                                             Enrolling...
@@ -285,7 +315,7 @@ export default function CourseDetails() {
                                 );
                             })}
                         </div>
-                        {selectedBatchId && (
+                        {selectedBatchId !== null && (
                             <div className="mt-3 text-sm text-primary">
                                 ✓ Batch selected for enrollment
                             </div>

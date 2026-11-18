@@ -139,9 +139,9 @@ export default function CoursePlayer() {
                         <div className="card bg-base-100 shadow">
                             <div className="card-body p-3 sm:p-6">
                                 <h3 className="card-title text-base sm:text-lg md:text-xl break-words">{lesson.title}</h3>
-                                <div className="bg-base-300 rounded overflow-hidden mt-2 sm:mt-4">
+                                <div className="aspect-video bg-base-300 rounded overflow-hidden mt-2 sm:mt-4">
                                     <iframe
-                                        style={{ height: '700px', width: '300px' }}
+                                        className="w-full h-full"
                                         src={convertToEmbedUrl(lesson.videoUrl)}
                                         title={lesson.title}
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -150,13 +150,20 @@ export default function CoursePlayer() {
                                     ></iframe>
                                 </div>
 
-                                <button
-                                    onClick={handleMarkComplete}
-                                    disabled={!!enrollment?.progress?.completedLessons?.includes(lesson)}
-                                    className={`btn btn-sm sm:btn-md ${enrollment?.progress?.completedLessons?.includes(lesson) ? "btn-disabled" : "btn-success"} mt-3 sm:mt-4 w-full sm:w-auto`}
-                                >
-                                    {enrollment?.progress?.completedLessons?.includes(lesson) ? "Completed ✓" : "✓ Mark as Complete"}
-                                </button>
+                                {(() => {
+                                    const isLessonCompleted = enrollment?.progress?.completedLessons?.some(
+                                        (lessonId) => String(lessonId) === String(lesson?._id)
+                                    );
+                                    return (
+                                        <button
+                                            onClick={handleMarkComplete}
+                                            disabled={!!isLessonCompleted}
+                                            className={`btn btn-sm sm:btn-md ${isLessonCompleted ? "btn-disabled" : "btn-success"} mt-3 sm:mt-4 w-full sm:w-auto`}
+                                        >
+                                            {isLessonCompleted ? "Completed ✓" : "✓ Mark as Complete"}
+                                        </button>
+                                    );
+                                })()}
                             </div>
                         </div>
                     )}
@@ -234,7 +241,9 @@ export default function CoursePlayer() {
                                                 const hasAssignment = !!les.assignmentPrompt;
                                                 const hasQuiz = les.quiz && les.quiz.length > 0;
                                                 const hasLiveClass = !!les.liveClassLink;
-                                                const isCompleted = enrollment?.progress?.completedLessons?.includes(les._id);
+                                                const isCompleted = enrollment?.progress?.completedLessons?.some(
+                                                    (lessonId) => String(lessonId) === String(les._id)
+                                                );
                                                 
                                                 // Check if live class is upcoming
                                                 const isUpcoming = hasLiveClass && les.liveClassDate && new Date(les.liveClassDate) > new Date();
@@ -768,7 +777,7 @@ function QuizInterface({ quiz, courseId, lessonId, enrollment, onComplete }) {
                                         >
                                             <input
                                                 type="radio"
-                                                name="quiz-option"
+                                                name={`question-${qIdx}`}
                                                 checked={answers[qIdx] === oIdx}
                                                 onChange={() => {
                                                     if (!loading) {

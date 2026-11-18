@@ -21,11 +21,20 @@ export default function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const trimmedEmail = form.email.trim();
+        if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+            setError("Please enter a valid email address.");
+            return;
+        }
+        if (!form.password || form.password.length < 6) {
+            setError("Password must be at least 6 characters.");
+            return;
+        }
         try {
             setLoading(true);
             setError(null);
 
-            const res = await loginUser(form);
+            const res = await loginUser({ email: trimmedEmail, password: form.password });
             saveToken(res.data.token);
 
             navigate("/");
@@ -80,43 +89,6 @@ export default function Login() {
                             >
                                 <UserCheck className="w-3 h-3" /> Student Fill
                             </button>
-                        </div>
-
-                        {/* Dev Route Inspector Bypass */}
-                        <div className="pt-2 border-t border-base-300/80">
-                            <p className="text-[11px] font-semibold text-base-content/70 mb-1.5 flex items-center justify-between">
-                                <span>🔓 Direct Login & Inspect Routes (Dev Bypass):</span>
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYzFmMzdlNjYwMDZmMWRjYmI1YjUyNiIsInJvbGUiOiJzdHVkZW50IiwiaWF0IjoxNzkxMDk4NTg4fQ.4s3Ygh9GtTper2SB8byNILxPSxZ8y3pO-WyFupmQ0Ws";
-                                        localStorage.setItem("token", token);
-                                        localStorage.setItem("user_token", token);
-                                        localStorage.setItem("dev_bypass", "true");
-                                        navigate("/student");
-                                        window.location.reload();
-                                    }}
-                                    className="btn btn-xs btn-primary font-bold text-xs"
-                                >
-                                    🎓 Student Portal
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYzFmMzdlNjYwMDZmMWRjYmI1YjUyNSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc5MTA5ODU4OH0.vL3Hj-fEGVbouM-cZ9RtMIpaCU5ugRwsNqaKyYdxdNY";
-                                        localStorage.setItem("token", token);
-                                        localStorage.setItem("user_token", token);
-                                        localStorage.setItem("dev_bypass", "true");
-                                        navigate("/admin");
-                                        window.location.reload();
-                                    }}
-                                    className="btn btn-xs btn-secondary font-bold text-xs"
-                                >
-                                    👑 Admin Portal
-                                </button>
-                            </div>
                         </div>
                     </div>
 

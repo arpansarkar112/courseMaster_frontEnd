@@ -71,15 +71,39 @@ export default function EditCourse() {
         });
     };
 
+    const [validationError, setValidationError] = useState(null);
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        setValidationError(null);
+
+        const trimmedTitle = form.title.trim();
+        const trimmedDesc = form.description.trim();
+        const trimmedInstructor = form.instructorName.trim();
+
+        if (!trimmedTitle || trimmedTitle.length < 3) {
+            setValidationError("Course title must be at least 3 non-whitespace characters.");
+            return;
+        }
+        if (!trimmedDesc || trimmedDesc.length < 10) {
+            setValidationError("Course description must be at least 10 non-whitespace characters.");
+            return;
+        }
+        if (!trimmedInstructor || trimmedInstructor.length < 2) {
+            setValidationError("Instructor name must be at least 2 non-whitespace characters.");
+            return;
+        }
+        if (Number.isNaN(Number(form.price)) || Number(form.price) < 0) {
+            setValidationError("Price must be a valid non-negative number.");
+            return;
+        }
 
         const payload = {
-            title: form.title,
-            description: form.description,
-            instructorName: form.instructorName,
+            title: trimmedTitle,
+            description: trimmedDesc,
+            instructorName: trimmedInstructor,
             price: form.price,
-            category: form.category,
+            category: form.category.trim(),
             tags: form.tags
                 .split(",")
                 .map((t) => t.trim())
@@ -110,9 +134,9 @@ export default function EditCourse() {
         <div className="max-w-4xl w-full">
             <h1 className="page-heading mb-4 sm:mb-6">Edit Course</h1>
 
-            {error && (
+            {(validationError || error) && (
                 <div className="alert alert-error mb-4">
-                    <span>{error}</span>
+                    <span>{validationError || error}</span>
                 </div>
             )}
 

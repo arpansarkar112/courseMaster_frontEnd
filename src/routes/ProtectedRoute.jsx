@@ -1,20 +1,14 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getToken } from "../utils/auth";
+import { getToken, clearToken } from "../utils/auth";
 import { getMe } from "../services/auth.api";
 
 export default function ProtectedRoute({ children }) {
   const [isValid, setIsValid] = useState(null);
   const token = getToken();
+  const location = useLocation();
 
   useEffect(() => {
-    // Check if dev bypass is enabled for testing/grading protected routes
-    const isBypass = localStorage.getItem("dev_bypass") === "true" || window.location.search.includes("bypass=true");
-    if (isBypass) {
-      setIsValid(true);
-      return;
-    }
-
     if (!token) {
       setIsValid(false);
       return;
@@ -24,8 +18,8 @@ export default function ProtectedRoute({ children }) {
     getMe()
       .then(() => setIsValid(true))
       .catch(() => {
-        // Fallback: if token exists but network/server check fails, still allow if token exists
-        setIsValid(!!token);
+        clearToken();
+        setIsValid(false);
       });
   }, [token]);
 
@@ -38,7 +32,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!isValid) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;

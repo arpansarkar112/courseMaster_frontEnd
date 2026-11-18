@@ -10,22 +10,22 @@ export default function CoursesPreview() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const fetchCourses = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Fetch only 6 courses for preview
+            const res = await getCourses({ page: 1, limit: 6 });
+            setCourses(res.data.courses || []);
+        } catch (err) {
+            setError(err.response?.data?.message || "Failed to load courses");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchCourses = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                // Fetch only 6 courses for preview
-                const res = await getCourses({ page: 1, limit: 6 });
-                setCourses(res.data.courses || []);
-            } catch (err) {
-                setError("Failed to load courses");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchCourses();
     }, []);
 
@@ -55,8 +55,11 @@ export default function CoursesPreview() {
             )}
 
             {error && (
-                <div className="alert alert-error">
+                <div className="alert alert-error flex justify-between items-center">
                     <span>{error}</span>
+                    <button onClick={fetchCourses} className="btn btn-sm btn-outline">
+                        Retry
+                    </button>
                 </div>
             )}
 

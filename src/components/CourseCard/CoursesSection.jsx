@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { getCourses } from "../../services/courses.api";
 import CoursesFilters from "./CoursesFilters";
 import CoursesGrid from "./CoursesGrid";
@@ -8,20 +8,59 @@ import CoursesPagination from "./CoursesPagination";
 
 export default function CoursesSection() {
     const { user } = useSelector((state) => state.auth);
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [courses, setCourses] = useState([]);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // query states
-    const [page, setPage] = useState(1);
+    // query states initialized from URL search params
+    const [page, setPageState] = useState(() => Number(searchParams.get("page")) || 1);
     const [limit] = useState(8);
-    const [search, setSearch] = useState("");
-    const [sort, setSort] = useState("");
-    const [category, setCategory] = useState("");
-    const [tags, setTags] = useState("");
+    const [search, setSearch] = useState(() => searchParams.get("search") || "");
+    const [appliedSearch, setAppliedSearch] = useState(() => searchParams.get("search") || "");
+    const [sort, setSortState] = useState(() => searchParams.get("sort") || "");
+    const [category, setCategoryState] = useState(() => searchParams.get("category") || "");
+    const [tags, setTagsState] = useState(() => searchParams.get("tags") || "");
 
-    const fetchCourses = async () => {
+    const syncUrlParams = useCallback(
+        (nextState) => {
+            const params = {};
+            if (nextState.page && nextState.page > 1) params.page = String(nextState.page);
+            if (nextState.search) params.search = nextState.search;
+            if (nextState.sort) params.sort = nextState.sort;
+            if (nextState.category) params.category = nextState.category;
+            if (nextState.tags) params.tags = nextState.tags;
+            setSearchParams(params, { replace: true });
+        },
+        [setSearchParams]
+    );
+
+    const setPage = (nextPage) => {
+        setPageState(nextPage);
+        syncUrlParams({ page: nextPage, search: appliedSearch, sort, category, tags });
+    };
+
+    const setSort = (nextSort) => {
+        setSortState(nextSort);
+        setPageState(1);
+        syncUrlParams({ page: 1, search: appliedSearch, sort: nextSort, category, tags });
+    };
+
+    const setCategory = (nextCategory) => {
+        setCategoryState(nextCategory);
+        setPageState(1);
+        syncUrlParams({ page: 1, search: appliedSearch, sort, category: nextCategory, tags });
+    };
+
+    const setTags = (nextTags) => {
+        setTagsState(nextTags);
+        setPageState(1);
+        syncUrlParams({ page: 1, search: appliedSearch, sort, category, tags: nextTags });
+    };
+
+    const fetchCourses = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -29,7 +68,7 @@ export default function CoursesSection() {
             const params = {
                 page,
                 limit,
-                search: search || undefined,
+                search: appliedSearch || undefined,
                 sort: sort || undefined,
                 category: category || undefined,
                 tags: tags || undefined,
@@ -39,27 +78,23 @@ export default function CoursesSection() {
             setCourses(res.data.courses || []);
             setTotalPages(res.data.totalPages || 1);
         } catch (err) {
-            setError("Failed to load courses");
+            setError(err.response?.data?.message || "Failed to load courses. Please try again.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, limit, appliedSearch, sort, category, tags]);
 
     useEffect(() => {
         fetchCourses();
-        // eslint-disable-next-line
-    }, [page, sort, category, tags]);
+    }, [fetchCourses]);
 
     const onSearchSubmit = (e) => {
         e.preventDefault();
-        setPage(1);
-        fetchCourses();
+        const trimmed = search.trim();
+        setAppliedSearch(trimmed);
+        setPageState(1);
+        syncUrlParams({ page: 1, search: trimmed, sort, category, tags });
     };
-
-    // reset page when filters change
-    useEffect(() => {
-        setPage(1);
-    }, [sort, category, tags]);
 
     return (
         <div className="space-y-6">
@@ -80,8 +115,11 @@ export default function CoursesSection() {
             )}
 
             {error && (
-                <div className="alert alert-error">
+                <div className="alert alert-error flex justify-between items-center">
                     <span>{error}</span>
+                    <button onClick={fetchCourses} className="btn btn-sm btn-outline">
+                        Retry
+                    </button>
                 </div>
             )}
 

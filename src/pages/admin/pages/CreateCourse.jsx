@@ -49,11 +49,39 @@ export default function CreateCourse() {
         });
     };
 
+    const [validationError, setValidationError] = useState(null);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setValidationError(null);
+
+        const trimmedTitle = form.title.trim();
+        const trimmedDesc = form.description.trim();
+        const trimmedInstructor = form.instructorName.trim();
+
+        if (!trimmedTitle || trimmedTitle.length < 3) {
+            setValidationError("Course title must be at least 3 non-whitespace characters.");
+            return;
+        }
+        if (!trimmedDesc || trimmedDesc.length < 10) {
+            setValidationError("Course description must be at least 10 non-whitespace characters.");
+            return;
+        }
+        if (!trimmedInstructor || trimmedInstructor.length < 2) {
+            setValidationError("Instructor name must be at least 2 non-whitespace characters.");
+            return;
+        }
+        if (Number.isNaN(Number(form.price)) || Number(form.price) < 0) {
+            setValidationError("Price must be a valid non-negative number.");
+            return;
+        }
 
         const payload = {
             ...form,
+            title: trimmedTitle,
+            description: trimmedDesc,
+            instructorName: trimmedInstructor,
+            category: form.category.trim(),
             tags: form.tags
                 .split(",")
                 .map((t) => t.trim())
@@ -66,7 +94,7 @@ export default function CreateCourse() {
         };
 
         dispatch(createCourseAsync(payload)).then((result) => {
-            if (!result.payload?.message && !error) {
+            if (!result.error) {
                 setTimeout(() => navigate("/admin/courses"), 1500);
             }
         });
@@ -84,9 +112,9 @@ export default function CreateCourse() {
         <div className="max-w-4xl w-full">
             <h1 className="page-heading mb-4 sm:mb-6">Create New Course</h1>
 
-            {error && (
+            {(validationError || error) && (
                 <div className="alert alert-error mb-4">
-                    <span>{error}</span>
+                    <span>{validationError || error}</span>
                 </div>
             )}
 
